@@ -94,6 +94,15 @@ class SQLiteTableGenerator:
 
         return raw_value
 
+    @staticmethod
+    def _drop_existing_tables(conn: sqlite3.Connection) -> None:
+        """Drop all user-created tables so each upload fully refreshes the DB."""
+        existing_tables = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+        ).fetchall()
+        for (table_name,) in existing_tables:
+            conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+
     def generate_from_csv(self, csv_path: str) -> dict[str, str | int]:
         csv_file = Path(csv_path).resolve()
         if not csv_file.exists() or csv_file.suffix.lower() != ".csv":
@@ -113,8 +122,9 @@ class SQLiteTableGenerator:
                 column_types = self._infer_column_types(rows, columns)
 
                 with sqlite3.connect(self.db_path) as conn:
+                    self._drop_existing_tables(conn)
+
                     quoted_cols = [f'"{col}" {column_types[col]}' for col in columns]
-                    conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
                     conn.execute(f'CREATE TABLE "{table_name}" ({", ".join(quoted_cols)})')
 
                     placeholders = ", ".join(["?"] * len(columns))

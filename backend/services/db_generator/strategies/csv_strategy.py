@@ -10,6 +10,12 @@ class CSVUploadStrategy(FileUploadStrategy):
     Validates file extension and streams to disk.
     """
     
+    def clean_upload_dir(self):
+        """
+        Clean the upload directory by removing all existing files.
+        """
+        super().clean_upload_dir()
+    
     def upload(self, file: UploadFile) -> str:
         """
         Upload a CSV file with validation.
@@ -30,6 +36,9 @@ class CSVUploadStrategy(FileUploadStrategy):
         # Ensure upload directory exists (resolved by the factory)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         
+        # Clean current files in the upload directory before saving new file
+        self.clean_upload_dir()
+
         # Save file to disk
         target_path = self.upload_dir / file.filename
         with target_path.open("wb") as buffer:
