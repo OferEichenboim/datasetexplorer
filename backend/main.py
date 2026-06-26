@@ -10,10 +10,10 @@ app = FastAPI()
 def read_root():
     return {"Hello": "Home page"}
 
-@app.post("/upload-csv")
-def upload_csv(file: UploadFile = File(...)):
+@app.post("/upload-file")
+def upload_file(file: UploadFile = File(...)):
     """
-    Upload a CSV file using the factory-provided strategy.
+    Upload a file using the factory-provided strategy based on file type.
     
     The factory automatically detects the file type and returns the appropriate
     strategy. Currently only CSV is supported, but adding new file types
