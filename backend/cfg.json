@@ -1,6 +1,8 @@
 {
     "db_dir_path": "db",
     "upload_dir_path": "db/uploaded_files",
-    "db_path": "db/database.db", 
+    "db_path": "db/database.db",
+    "openai_model": "gpt-4o-mini",
+    "ask_max_rows": 200,
     "log_level": "INFO"
 }
