@@ -4,7 +4,9 @@ from services.db_generator.file_upload import FileUploadStrategyFactory
 from services.db_generator.sqlite_generator import SQLiteTableGenerator
 from exceptions.file_errors import FileServiceError
 from exceptions.query_errors import QueryServiceError
+from exceptions.rows_errors import RowsServiceError
 from services.input_query.service import AskRequest
+from services.rows.service import RowsService
 
 app = FastAPI()
 
@@ -47,4 +49,13 @@ def ask_database(payload: AskRequest):
             db_path="db/database.db", #TODO: generalize this
         )
     except QueryServiceError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@app.get("/rows")
+def get_rows(page: int = 1, page_size: int = 50):
+    """Return paginated rows from the current SQLite database table."""
+    try:
+        return RowsService().get_rows_page(page=page, page_size=page_size)
+    except RowsServiceError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
