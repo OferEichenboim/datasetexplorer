@@ -313,13 +313,26 @@ function App() {
           <section className="panel query-panel">
             <h2>Step 2: Ask A Natural-Language Query</h2>
             <form onSubmit={handleAskQuestion}>
-              <textarea
-                value={question}
-                onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Example: Show the top 10 rows by revenue."
-                rows={4}
-                disabled={view === 'uploading' || view === 'querying'}
-              />
+              <div className="textarea-wrapper">
+                <textarea
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder="Example: Show the top 10 rows by revenue."
+                  rows={4}
+                  disabled={view === 'uploading' || view === 'querying'}
+                />
+                {question && (
+                  <button
+                    type="button"
+                    className="clear-query"
+                    aria-label="Clear query"
+                    onClick={() => setQuestion('')}
+                    disabled={view === 'uploading' || view === 'querying'}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <div className="query-actions">
                 <button type="submit" disabled={view === 'uploading' || view === 'querying'}>
                   {view === 'querying' ? 'Running Query...' : 'Run Query'}
