@@ -226,12 +226,7 @@ function App() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <p className="kicker">Dataset Explorer</p>
-        <h1>CSV Explorer For FastAPI Backend</h1>
-        <p className="subtitle">
-          Upload a CSV file, browse rows with pagination, and ask natural-language
-          questions over the generated SQLite table.
-        </p>
+        <h1>Dataset Explorer</h1>
       </header>
 
       {view === 'error' && (
@@ -243,7 +238,7 @@ function App() {
       )}
 
       <section className="panel upload-panel">
-        <h2>Step 1: Upload A CSV File</h2>
+        <h2>Upload A CSV File</h2>
         <p>Only files ending in .csv are supported.</p>
 
         <div className="upload-row">
@@ -311,7 +306,7 @@ function App() {
           )}
 
           <section className="panel query-panel">
-            <h2>Step 2: Ask A Natural-Language Query</h2>
+            <h2>Ask A Natural-Language Query</h2>
             <form onSubmit={handleAskQuestion}>
               <div className="textarea-wrapper">
                 <textarea
