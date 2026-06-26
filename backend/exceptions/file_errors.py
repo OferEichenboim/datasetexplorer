@@ -38,3 +38,9 @@ class UnsupportedFileTypeError(FileServiceError):
     This indicates the file extension is not supported by any available strategy.
     """
     pass
+
+
+class DatabaseGenerationError(FileServiceError):
+    """Raised when CSV-to-SQLite generation fails."""
+
+    pass
