@@ -2,7 +2,7 @@ from fastapi import FastAPI, Response, status, File, UploadFile
 from pydantic import BaseModel
 
 from services.db_generator.file_upload import FileUploadStrategyFactory
-
+from exceptions.file_errors import FileServiceError
 
 app = FastAPI()
 
@@ -19,8 +19,11 @@ def upload_csv(file: UploadFile = File(...)):
     strategy. Currently only CSV is supported, but adding new file types
     requires only registering a new strategy with the factory.
     """
-    factory = FileUploadStrategyFactory.get_instance()
-    strategy = factory.get_strategy(file.filename)
-    saved_path = strategy.upload(file)
-    return {"status": "success", "path": saved_path}
-    
+    try:
+        factory = FileUploadStrategyFactory.get_instance()
+        strategy = factory.get_strategy(file.filename)
+        saved_path = strategy.upload(file)
+        return {"status": "success", "path": saved_path}
+    except FileServiceError as e:
+        # Handle file service errors (unsupported type, validation errors, etc.)
+        return {"status": "error", "message": str(e)}, status.HTTP_400_BAD_REQUEST
