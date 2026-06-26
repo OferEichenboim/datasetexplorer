@@ -36,3 +36,15 @@ def upload_file(file: UploadFile = File(...)):
         }
     except FileServiceError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@app.post("/ask")
+def ask_database(payload: AskRequest):
+    """Accept free-text question, query LLM with context, return structured answer."""
+    try:
+        return AskRequest.handle_ask(
+            question=payload.question,
+            db_path="db/database.db", #TODO: generalize this
+        )
+    except QueryServiceError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
