@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI, status, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from services.db_generator.file_upload import FileUploadStrategyFactory
 from services.db_generator.sqlite_generator import SQLiteTableGenerator
@@ -9,6 +12,28 @@ from services.input_query.service import AskRequest
 from services.rows.service import RowsService
 
 app = FastAPI()
+
+
+def _cors_origins() -> list[str]:
+    configured = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+    if configured:
+        return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+    return [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():
