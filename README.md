@@ -111,4 +111,12 @@ Example ask request:
   "execute": true
 }
 ```
+
+## What I would do Next
+1. Unite file path management.
+2. Parse more data types shown in the input file for better context management (dates, names etc.).
+3. Improve LLM interaction (experiments with different propmt types)
+4. Add testing and logging.
+5. Improve error handling.
+
  
