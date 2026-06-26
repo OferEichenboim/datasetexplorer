@@ -4,3 +4,4 @@ __pycache__/
 backend/.venv/
 backend/db/
 .env
+backend/.python-version
