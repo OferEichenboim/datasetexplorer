@@ -3,6 +3,7 @@ import json
 import re
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from exceptions.file_errors import DatabaseGenerationError
 from services.db_generator.file_upload import BACKEND_ROOT
@@ -27,6 +28,72 @@ class SQLiteTableGenerator:
         normalized = re.sub(r"_+", "_", normalized).strip("_")
         return normalized or "dataset"
 
+    @staticmethod
+    def _parse_int(value: str) -> int | None:
+        if re.fullmatch(r"[+-]?\d+", value):
+            return int(value)
+        return None
+
+    @staticmethod
+    def _parse_float(value: str) -> float | None:
+        # Accept decimal and exponent forms such as 12.3, .5, 1e6.
+        if re.fullmatch(r"[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?", value):
+            return float(value)
+        return None
+
+    @classmethod
+    def _infer_column_types(cls, rows: list[dict[str, str]], columns: list[str]) -> dict[str, str]:
+        inferred: dict[str, str] = {}
+        for column in columns:
+            saw_real = False
+            saw_integer = False
+            saw_text = False
+
+            for row in rows:
+                raw_value = (row.get(column, "") or "").strip()
+                if raw_value == "":
+                    continue
+
+                int_value = cls._parse_int(raw_value)
+                if int_value is not None:
+                    saw_integer = True
+                    continue
+
+                float_value = cls._parse_float(raw_value)
+                if float_value is not None:
+                    saw_real = True
+                    continue
+
+                saw_text = True
+                break
+
+            if saw_text:
+                inferred[column] = "TEXT"
+            elif saw_real:
+                inferred[column] = "REAL"
+            elif saw_integer:
+                inferred[column] = "INTEGER"
+            else:
+                inferred[column] = "TEXT"
+
+        return inferred
+
+    @classmethod
+    def _convert_value(cls, value: str, sqlite_type: str) -> Any:
+        raw_value = (value or "").strip()
+        if raw_value == "":
+            return None if sqlite_type in {"INTEGER", "REAL"} else ""
+
+        if sqlite_type == "INTEGER":
+            parsed_int = cls._parse_int(raw_value)
+            return parsed_int if parsed_int is not None else raw_value
+
+        if sqlite_type == "REAL":
+            parsed_float = cls._parse_float(raw_value)
+            return parsed_float if parsed_float is not None else raw_value
+
+        return raw_value
+
     def generate_from_csv(self, csv_path: str) -> dict[str, str | int]:
         csv_file = Path(csv_path).resolve()
         if not csv_file.exists() or csv_file.suffix.lower() != ".csv":
@@ -42,8 +109,11 @@ class SQLiteTableGenerator:
                 if not columns:
                     raise DatabaseGenerationError("CSV file has no header row.")
 
+                rows = list(reader)
+                column_types = self._infer_column_types(rows, columns)
+
                 with sqlite3.connect(self.db_path) as conn:
-                    quoted_cols = [f'"{col}" TEXT' for col in columns]
+                    quoted_cols = [f'"{col}" {column_types[col]}' for col in columns]
                     conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
                     conn.execute(f'CREATE TABLE "{table_name}" ({", ".join(quoted_cols)})')
 
@@ -54,8 +124,11 @@ class SQLiteTableGenerator:
                     )
 
                     row_count = 0
-                    for row in reader:
-                        conn.execute(insert_sql, [row.get(col, "") for col in columns])
+                    for row in rows:
+                        converted_values = [
+                            self._convert_value(row.get(col, ""), column_types[col]) for col in columns
+                        ]
+                        conn.execute(insert_sql, converted_values)
                         row_count += 1
 
                     conn.commit()
