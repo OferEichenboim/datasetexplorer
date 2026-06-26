@@ -1,5 +1,5 @@
 #!/bin/bash
 PORT=${PORT:-8000}
 
-# Run the uvicorn binary directly from Render's virtual environment folder
-./.venv/bin/uvicorn main:app --host 0.0.0.0 --port "$PORT" --workers 4
+# Execute uvicorn as a module using the active Python interpreter
+python -m uvicorn main:app --host 0.0.0.0 --port "$PORT" --workers 4
