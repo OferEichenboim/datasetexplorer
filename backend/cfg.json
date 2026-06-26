@@ -1,0 +1,6 @@
+{
+    "db_dir_path": "db",
+    "upload_dir_path": "db/uploaded_files",
+    "db_path": "db/database.db", 
+    "log_level": "INFO"
+}

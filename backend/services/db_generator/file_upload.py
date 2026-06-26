@@ -1,98 +1,29 @@
 import json
-import shutil
 from pathlib import Path
-from abc import ABC, abstractmethod
-from fastapi import UploadFile
 from typing import Dict, Type
 
-# Load configuration
-with open('cfg.json', 'r') as f:
+from .strategies.base_strategy import FileUploadStrategy
+from .strategies.csv_strategy import CSVUploadStrategy  
+
+# ============================================================================
+# CONFIGURATION & PATH RESOLUTION
+# ============================================================================
+
+# Resolve paths from the backend directory so cfg.json values stay portable.
+BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+CFG_PATH = BACKEND_ROOT / "cfg.json"
+
+with CFG_PATH.open("r", encoding="utf-8") as f:
     cfg = json.load(f)
 
-upload_path = cfg.get('csv_dir_path', 'backend/db/uploaded_files/')
-
-
-# ============================================================================
-# ABSTRACT BASE CLASS & STRATEGY IMPLEMENTATIONS
-# ============================================================================
-
-class FileUploadStrategy(ABC):
-    """
-    Abstract base class for file upload strategies.
-    Each file type (CSV, JSON, Parquet, etc.) implements this interface.
-    """
-    
-    @abstractmethod
-    def upload(self, file: UploadFile) -> str:
-        """
-        Upload and save the file to disk.
-        
-        Args:
-            file: UploadFile object from FastAPI
-            
-        Returns:
-            str: Absolute path to the saved file
-            
-        Raises:
-            Should raise custom exceptions from backend.exceptions.file_errors
-        """
-        pass
-        
-
-class CSVUploadStrategy(FileUploadStrategy):
-    """
-    Strategy for uploading and saving CSV files.
-    Validates file extension and streams to disk.
-    """
-    
-    def upload(self, file: UploadFile) -> str:
-        """
-        Upload a CSV file with validation.
-        
-        Args:
-            file: UploadFile object
-            
-        Returns:
-            str: Absolute path to saved CSV file
-            
-        Raises:
-            ValueError: If file extension is not .csv
-        """
-        # Validate file extension
-        if not file.filename.endswith('.csv'):
-            raise ValueError(f"File extension must be .csv, got {file.filename}")
-        
-        # Create upload directory if it doesn't exist
-        upload_dir = Path(upload_path)
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Save file to disk
-        target_path = upload_dir / file.filename
-        with target_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        return str(target_path.resolve())
-
-
-# ============================================================================
-# FACTORY PATTERN
-# ============================================================================
+# cfg.json should store backend-relative paths like "db/uploaded_files".
+UPLOAD_DIR_RELATIVE = Path(cfg.get("upload_dir_path", "db/uploaded_files"))
+UPLOAD_DIR_ABSOLUTE = (BACKEND_ROOT / UPLOAD_DIR_RELATIVE).resolve()
 
 class FileUploadStrategyFactory:
-    """
-    Singleton factory that manages file upload strategies.
-    
-    Maintains a registry of strategies mapped by file extension.
-    Provides a single point for creating and retrieving strategy instances.
-    
-    Usage:
-        factory = FileUploadStrategyFactory.get_instance()
-        strategy = factory.get_strategy("data.csv")
-        saved_path = strategy.upload(file)
-    """
-    
+
     _instance = None
-    
+
     def __init__(self):
         """Initialize the factory with an empty registry."""
         self._strategies: Dict[str, Type[FileUploadStrategy]] = {}
@@ -148,8 +79,8 @@ class FileUploadStrategyFactory:
                 f"Supported types: {', '.join(self._strategies.keys())}"
             )
         
-        # Return instantiated strategy
-        return strategy_class()
+        # The factory injects shared dependencies so endpoint code stays stable.
+        return strategy_class(UPLOAD_DIR_ABSOLUTE)
 
 
 # ============================================================================
