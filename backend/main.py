@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Response, status, File, UploadFile
-from pydantic import BaseModel
+from fastapi import FastAPI, status, File, UploadFile, HTTPException
 
 from services.db_generator.file_upload import FileUploadStrategyFactory
+from services.db_generator.sqlite_generator import SQLiteTableGenerator
 from exceptions.file_errors import FileServiceError
+from exceptions.query_errors import QueryServiceError
+from services.input_query.service import AskRequest
 
 app = FastAPI()
 
@@ -23,7 +25,14 @@ def upload_file(file: UploadFile = File(...)):
         factory = FileUploadStrategyFactory.get_instance()
         strategy = factory.get_strategy(file.filename)
         saved_path = strategy.upload(file)
-        return {"status": "success", "path": saved_path}
+        sqlite_generator = SQLiteTableGenerator() #this should be separated from the upload functionality
+        generation_result = sqlite_generator.generate_from_csv(saved_path)
+
+        return {
+            "status": "success",
+            "path": saved_path,
+            "message": "CSV uploaded and SQLite table generated successfully.",
+            "sqlite": generation_result,
+        }
     except FileServiceError as e:
-        # Handle file service errors (unsupported type, validation errors, etc.)
-        return {"status": "error", "message": str(e)}, status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
