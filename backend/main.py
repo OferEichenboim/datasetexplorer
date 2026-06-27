@@ -13,6 +13,9 @@ from services.rows.service import RowsService
 
 app = FastAPI()
 
+# ==========================
+# CORS Configuration
+# ==========================
 
 def _normalize_origin(origin: str) -> str:
     return origin.strip().rstrip("/")
@@ -64,6 +67,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ===========================
+# API Endpoints
+# ==========================
 
 @app.get("/")
 def read_root():
