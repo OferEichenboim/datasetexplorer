@@ -1,5 +1,4 @@
 # infrastructure files
-__init__.py
 __pycache__/
 backend/.venv/
 backend/db/

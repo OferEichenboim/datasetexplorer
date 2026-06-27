@@ -1,0 +1,1 @@
+"""Input query service package."""
