@@ -103,16 +103,19 @@ class SQLiteTableGenerator:
         for (table_name,) in existing_tables:
             conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
 
-    def generate_from_csv(self, csv_path: str) -> dict[str, str | int]:
-        csv_file = Path(csv_path).resolve()
-        if not csv_file.exists() or csv_file.suffix.lower() != ".csv":
+    def generate(self, path: str) -> dict[str, str | int]:
+        '''generate a SQLite table from a CSV file at the given path.
+        TODO: refactor to support other file types in the future.'''
+        
+        file = Path(path).resolve()
+        if not file.exists() or file.suffix.lower() != ".csv":
             raise DatabaseGenerationError("CSV source path is invalid or file is missing.")
 
-        table_name = self._sanitize_identifier(csv_file.stem)
+        table_name = self._sanitize_identifier(file.stem)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            with csv_file.open("r", encoding="utf-8", newline="") as f:
+            with file.open("r", encoding="utf-8", newline="") as f:
                 reader = csv.DictReader(f)
                 columns = reader.fieldnames or []
                 if not columns:

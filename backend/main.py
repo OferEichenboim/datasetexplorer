@@ -98,7 +98,7 @@ def upload_file(file: UploadFile = File(...)):
         # 3. Trace SQLite translation stage
         print("[UPLOAD TRACE] Starting SQLiteTableGenerator...")
         sqlite_generator = SQLiteTableGenerator()
-        generation_result = sqlite_generator.generate_from_csv(saved_path)
+        generation_result = sqlite_generator.generate(saved_path)
         print(f"[UPLOAD TRACE] Generation complete! Result: {generation_result}")
 
         return {
