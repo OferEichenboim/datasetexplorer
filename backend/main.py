@@ -14,58 +14,60 @@ from services.rows.service import RowsService
 app = FastAPI()
 
 
+def _normalize_origin(origin: str) -> str:
+    return origin.strip().rstrip("/")
+
 
 def _cors_origins() -> list[str]:
     configured = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
-    if configured:
-        return [origin.strip() for origin in configured.split(",") if origin.strip()]
-
-    return [
+    defaults = {
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-    ]
+        "https://datasetexplorer.vercel.app",
+    }
 
+    if configured:
+        configured_origins = {
+            _normalize_origin(origin)
+            for origin in configured.split(",")
+            if origin.strip()
+        }
+        defaults.update(configured_origins)
+
+    return sorted(defaults)
+
+
+def _cors_origin_regex() -> str:
+    configured_regex = os.getenv("CORS_ALLOW_ORIGIN_REGEX", "").strip()
+    if configured_regex:
+        return configured_regex
+
+    # Support this project's Vercel preview deployments.
+    return r"https://datasetexplorer(?:-.*)?\.vercel\.app"
+
+
+allowed_origins = _cors_origins()
+allowed_origin_regex = _cors_origin_regex()
+print(f"[CORS CONFIG] allow_origins={allowed_origins}")
+print(f"[CORS CONFIG] allow_origin_regex={allowed_origin_regex}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins(),
+    allow_origins=allowed_origins,
+    allow_origin_regex=allowed_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 def read_root():
     return {"Hello": "Home page"}
-
-# @app.post("/upload-file")
-# def upload_file(file: UploadFile = File(...)):
-#     """
-#     Upload a file using the factory-provided strategy based on file type.
-    
-#     The factory automatically detects the file type and returns the appropriate
-#     strategy. Currently only CSV is supported, but adding new file types
-#     requires only registering a new strategy with the factory.
-#     """
-#     try:
-#         factory = FileUploadStrategyFactory.get_instance()
-#         strategy = factory.get_strategy(file.filename)
-#         saved_path = strategy.upload(file)
-#         sqlite_generator = SQLiteTableGenerator() #this should be separated from the upload functionality
-#         generation_result = sqlite_generator.generate_from_csv(saved_path)
-
-#         return {
-#             "status": "success",
-#             "path": saved_path,
-#             "message": "CSV uploaded and SQLite table generated successfully.",
-#             "sqlite": generation_result,
-#         }
-#     except FileServiceError as e:
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @app.post("/upload-file")
@@ -76,16 +78,16 @@ def upload_file(file: UploadFile = File(...)):
     try:
         # 1. Trace incoming request
         print(f"[UPLOAD TRACE] Received file: {file.filename}")
-        
+
         factory = FileUploadStrategyFactory.get_instance()
         strategy = factory.get_strategy(file.filename)
         print(f"[UPLOAD TRACE] Using strategy: {strategy.__class__.__name__}")
-        
+
         # 2. Trace file writing stage
         saved_path = strategy.upload(file)
         print(f"[UPLOAD TRACE] File successfully written to disk at: {saved_path}")
         print(f"[UPLOAD TRACE] Does path exist? {os.path.exists(saved_path)}")
-        
+
         # 3. Trace SQLite translation stage
         print("[UPLOAD TRACE] Starting SQLiteTableGenerator...")
         sqlite_generator = SQLiteTableGenerator()
@@ -104,9 +106,11 @@ def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         # 4. Catch ANY unhandled crash (e.g., FileNotFoundError, PermissionError)
         import traceback
+
         print(f"[UPLOAD CRITICAL FAILURE] Unhandled Exception: {str(e)}")
         print(traceback.format_exc())  # Prints the full stack trace to Render logs
         raise HTTPException(status_code=500, detail=f"Server-side failure: {str(e)}")
+
 
 @app.post("/ask")
 def ask_database(payload: AskRequest):
@@ -114,7 +118,7 @@ def ask_database(payload: AskRequest):
     try:
         return AskRequest.handle_ask(
             question=payload.question,
-            db_path="db/database.db", #TODO: generalize this
+            db_path="db/database.db",  # TODO: generalize this
         )
     except QueryServiceError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
