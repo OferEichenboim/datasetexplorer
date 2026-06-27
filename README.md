@@ -113,10 +113,8 @@ Example ask request:
 ```
 
 ## What I would do Next
-1. Unite file path management.
-2. Parse more data types shown in the input file for better context management (dates, names etc.).
-3. Improve LLM interaction (experiments with different propmt types)
-4. Add testing and logging.
-5. Improve error handling.
-
- 
+1. Action: Build an automated testing suite using pytest to cover edge cases like malformed datasets and network dropouts.
+2. Upgrade the architecture to support massive CSV files by replacing simple text context with a vector database.
+3. Deploy an in-memory caching system like Redis to store frequent natural-language questions and their matching results.
+4. Integrate structured logging and an AI tracing tool to continuously monitor endpoint health.
+5. Protect the system against prompt injection and malicious CSV files by validating inputs before they reach the LLM.
